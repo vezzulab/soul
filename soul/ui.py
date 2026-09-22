@@ -1992,6 +1992,7 @@ class Ventana(Adw.ApplicationWindow):
         menu.append(t("nav.settings"), "win.tray_settings")
         menu.append(t("tray.quit"), "win.tray_quit")
         popover = Gtk.PopoverMenu.new_from_model(menu)
+        popover.add_css_class("tray-menu")
         popover.set_parent(self)
         popover.set_halign(Gtk.Align.END)
         popover.set_valign(Gtk.Align.START)
@@ -2424,6 +2425,24 @@ class Ventana(Adw.ApplicationWindow):
         .terminal-live-text text selection {
             background: rgba(63,217,176,0.30);
         }
+        /* ---------- menu del clic derecho en la bandeja ---------- */
+        .tray-menu contents {
+            background: linear-gradient(165deg, #201A3C 0%, #140F28 55%, #0B0714 100%);
+            border: 1px solid rgba(168,139,255,0.22);
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5),
+                        inset 0 1px 0 rgba(255,255,255,0.08);
+            padding: 4px;
+        }
+        .tray-menu modelbutton, .tray-menu .model {
+            color: #EEE9FB;
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+        .tray-menu modelbutton:hover {
+            background: rgba(168,139,255,0.16);
+        }
+        .tray-menu arrow { background: #201A3C; }
         .update-note-dot {
             font-size: 6px; color: #A88BFF; margin-top: 7px;
         }
