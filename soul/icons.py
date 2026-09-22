@@ -126,6 +126,11 @@ PATHS = {
         '<path d="M16.6 8.2h1.6a2.6 2.6 0 010 5.2h-1.6"/>'
         '<path d="M7.6 3v1.6M11 3v1.6M14.4 3v1.6"/>'
     ),
+    "settings": (
+        '<circle cx="12" cy="12" r="2.8"/>'
+        '<path d="M12 3.6v2.4M12 18v2.4M20.4 12h-2.4M6 12H3.6"/>'
+        '<path d="M17.7 6.3l-1.7 1.7M8 16l-1.7 1.7M17.7 17.7L16 16M8 8L6.3 6.3"/>'
+    ),
 }
 
 COLORES = {
@@ -137,6 +142,7 @@ COLORES = {
     "privacy": "#F27BC8",
     "space": "#8093F7",
     "health": "#4FD98A",
+    "logs": "#F2B84B",
     "default": "#9FB0C4",
 }
 

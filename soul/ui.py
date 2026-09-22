@@ -15,6 +15,8 @@ from gi.repository import Gtk, Adw, GLib, Gdk, Gio  # noqa: E402
 
 from . import core  # noqa: E402
 from . import icons  # noqa: E402
+from . import updater  # noqa: E402
+from . import __version__  # noqa: E402
 from .orb import Orbe  # noqa: E402
 from .tray import Bandeja  # noqa: E402
 from .i18n import t, get_idioma, set_idioma  # noqa: E402
@@ -31,6 +33,8 @@ MODULOS = [
     ("privacy", "nav.privacy", "privacy", "grad-privacy"),
     ("space", "nav.space", "space", "grad-space"),
     ("health", "nav.health", "health", "grad-health"),
+    ("logs", "nav.logs", "logs", "grad-logs"),
+    ("settings", "nav.settings", "settings", "grad-logs"),
 ]
 
 
@@ -508,7 +512,7 @@ class FilaProceso(Gtk.Box):
         self.append(punto)
 
         textos = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
-        lbl = Gtk.Label(label=datos["nombre"], xalign=0, ellipsize=3)
+        lbl = Gtk.Label(label=datos["nombre"], xalign=0, ellipsize=3, max_width_chars=16)
         lbl.add_css_class("item-title")
         textos.append(lbl)
         desc = datos["desc"] or ""
@@ -516,7 +520,7 @@ class FilaProceso(Gtk.Box):
             extra = t("proc.instances", n=datos["procesos"])
             desc = f"{desc} · {extra}" if desc else extra
         if desc:
-            sub = Gtk.Label(label=desc, xalign=0, wrap=True)
+            sub = Gtk.Label(label=desc, xalign=0, ellipsize=3, max_width_chars=18)
             sub.add_css_class("item-sub")
             textos.append(sub)
         self.append(textos)
@@ -586,7 +590,7 @@ class VistaProcesos(VistaBase):
         self.flow_apps.set_column_spacing(14)
         self.flow_apps.set_row_spacing(10)
         self.flow_apps.set_min_children_per_line(1)
-        self.flow_apps.set_max_children_per_line(5)
+        self.flow_apps.set_max_children_per_line(3)
         self.contenido.append(self.flow_apps)
 
         # --- segundo plano: mismo patron, sin resumen (no invita a actuar)
@@ -603,7 +607,7 @@ class VistaProcesos(VistaBase):
         self.flow_bg.set_column_spacing(14)
         self.flow_bg.set_row_spacing(10)
         self.flow_bg.set_min_children_per_line(1)
-        self.flow_bg.set_max_children_per_line(5)
+        self.flow_bg.set_max_children_per_line(3)
         self.contenido.append(self.flow_bg)
 
         self._todos = []
@@ -934,14 +938,16 @@ class VistaSalud(VistaBase):
         self.cabecera(t("health.title"), t("health.desc"))
         self.tarjetas = {}
         grid = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE)
-        grid.set_max_children_per_line(2)
-        grid.set_column_spacing(14)
-        grid.set_row_spacing(14)
+        grid.set_max_children_per_line(4)
+        grid.set_min_children_per_line(2)
+        grid.set_column_spacing(16)
+        grid.set_row_spacing(16)
         grid.set_homogeneous(True)
         for clave, etiqueta in (("mem", "health.memory"), ("cpu", "health.cpu"),
                                 ("disk", "health.disk"), ("bat", "health.battery")):
-            tarjeta = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+            tarjeta = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             tarjeta.add_css_class("card")
+            tarjeta.add_css_class("health-card")
             titulo = Gtk.Label(label=t(etiqueta), xalign=0)
             titulo.add_css_class("task-title")
             valor = Gtk.Label(label="—", xalign=0)
@@ -950,6 +956,8 @@ class VistaSalud(VistaBase):
             barra.add_css_class("metric-bar")
             frase = Gtk.Label(label="", xalign=0, wrap=True)
             frase.add_css_class("task-desc")
+            frase.set_vexpand(True)
+            frase.set_valign(Gtk.Align.START)
             for w in (titulo, valor, barra, frase):
                 tarjeta.append(w)
             self.tarjetas[clave] = (valor, barra, frase, tarjeta)
@@ -965,12 +973,6 @@ class VistaSalud(VistaBase):
         self.caja_disco = Tarjeta()
         self.contenido.append(self.caja_disco)
         self._disco_pedido = False
-
-        # --- registro de problemas, traducido
-        self.contenido.append(seccion(t("log.title"), t("log.desc")))
-        self.caja_log = Tarjeta()
-        self.contenido.append(self.caja_log)
-        self._log_pedido = False
 
         self.refrescar()
         GLib.timeout_add_seconds(3, self._tick)
@@ -1025,45 +1027,10 @@ class VistaSalud(VistaBase):
             self.caja_disco.append(FilaSimple(t("disk.errors"), detalle))
         return False
 
-    def cargar_log(self):
-        """Tambien se pide una sola vez: revisa varios dias de historial,
-        no algo que cambie segundo a segundo."""
-        if self._log_pedido:
-            return
-        self._log_pedido = True
-        self._vaciar(self.caja_log)
-        self.caja_log.append(FilaSimple(t("disk.checking")))
-        en_hilo(lambda: core.registro_problemas(3), self._pinta_log)
-
-    def _pinta_log(self, items, _e):
-        self._vaciar(self.caja_log)
-        items = items or []
-        if not items:
-            self.caja_log.append(FilaSimple(t("log.empty")))
-            return False
-        idioma = get_idioma()
-        for it in items:
-            tipo = it["tipo"]
-            if tipo == "crash":
-                clave = "log.crash" if it["veces"] == 1 else "log.crash_pl"
-                titulo = t(clave, app=it["programa"], veces=it["veces"])
-                self.caja_log.append(FilaSimple(titulo, t("log.crash.desc")))
-            elif tipo == "service":
-                self.caja_log.append(FilaSimple(
-                    t("log.service", s=it["programa"]), t("log.service.desc")))
-            elif tipo == "oom":
-                clave = "log.oom" if it["veces"] == 1 else "log.oom_pl"
-                self.caja_log.append(FilaSimple(t(clave, veces=it["veces"]), t("log.oom.desc")))
-            elif tipo == "disk":
-                clave = "log.disk" if it["veces"] == 1 else "log.disk_pl"
-                self.caja_log.append(FilaSimple(t(clave, veces=it["veces"]), t("log.disk.desc")))
-        return False
-
     def _tick(self):
         if self.get_mapped():
             self.refrescar()
             self.cargar_disco()
-            self.cargar_log()
         return True
 
     def refrescar(self):
@@ -1126,6 +1093,187 @@ class VistaSalud(VistaBase):
         for c in ("verde", "amarillo", "rojo"):
             barra.remove_css_class(c)
         barra.add_css_class("verde" if pct < bueno else "amarillo" if pct < regular else "rojo")
+
+
+class VistaLogs(VistaBase):
+    """Lo mismo que revisaria un tecnico (journalctl, coredumps, servicios
+    fallidos), pero traducido a frases normales. Si algo no se reconoce,
+    no se muestra: mejor callar que asustar con una linea tecnica."""
+
+    def __init__(self, ventana):
+        super().__init__(ventana, "grad-logs")
+        self.cabecera(t("log.title"), t("log.desc"))
+
+        fila_top = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        fila_top.set_halign(Gtk.Align.END)
+        self.btn_copiar = Gtk.Button(label=t("log.copy"))
+        self.btn_copiar.add_css_class("pill")
+        self.btn_copiar.connect("clicked", self._copiar)
+        fila_top.append(self.btn_copiar)
+        self.contenido.append(fila_top)
+
+        self.caja_log = Tarjeta()
+        self.contenido.append(self.caja_log)
+        self._items = []
+
+        self.refrescar()
+
+    def _vaciar(self, caja):
+        hijo = caja.get_first_child()
+        while hijo:
+            sig = hijo.get_next_sibling()
+            caja.remove(hijo)
+            hijo = sig
+
+    def refrescar(self):
+        self._vaciar(self.caja_log)
+        self.caja_log.append(FilaSimple(t("disk.checking")))
+        en_hilo(lambda: core.registro_problemas(3), self._pinta_log)
+
+    def _pinta_log(self, items, _e):
+        self._items = items or []
+        self._vaciar(self.caja_log)
+        if not self._items:
+            self.caja_log.append(FilaSimple(t("log.empty")))
+            self.btn_copiar.set_sensitive(False)
+            return False
+        self.btn_copiar.set_sensitive(True)
+        for it in self._items:
+            tipo = it["tipo"]
+            if tipo == "crash":
+                clave = "log.crash" if it["veces"] == 1 else "log.crash_pl"
+                titulo = t(clave, app=it["programa"], veces=it["veces"])
+                self.caja_log.append(FilaSimple(titulo, t("log.crash.desc")))
+            elif tipo == "service":
+                self.caja_log.append(FilaSimple(
+                    t("log.service", s=it["programa"]), t("log.service.desc")))
+            elif tipo == "oom":
+                clave = "log.oom" if it["veces"] == 1 else "log.oom_pl"
+                self.caja_log.append(FilaSimple(t(clave, veces=it["veces"]), t("log.oom.desc")))
+            elif tipo == "disk":
+                clave = "log.disk" if it["veces"] == 1 else "log.disk_pl"
+                self.caja_log.append(FilaSimple(t(clave, veces=it["veces"]), t("log.disk.desc")))
+        return False
+
+    def _copiar(self, *_args):
+        """Junta el registro en texto plano, listo para pegar donde sea
+        (un ticket de ayuda, un chat) sin tener que escribir todo a mano."""
+        lineas = [f"SOul {__version__} — {t('log.title')}"]
+        for it in self._items:
+            tipo = it["tipo"]
+            if tipo == "crash":
+                clave = "log.crash" if it["veces"] == 1 else "log.crash_pl"
+                lineas.append("- " + t(clave, app=it["programa"], veces=it["veces"]))
+            elif tipo == "service":
+                lineas.append("- " + t("log.service", s=it["programa"]))
+            elif tipo == "oom":
+                clave = "log.oom" if it["veces"] == 1 else "log.oom_pl"
+                lineas.append("- " + t(clave, veces=it["veces"]))
+            elif tipo == "disk":
+                clave = "log.disk" if it["veces"] == 1 else "log.disk_pl"
+                lineas.append("- " + t(clave, veces=it["veces"]))
+        self.ventana.get_clipboard().set("\n".join(lineas))
+        self.ventana.aviso(t("log.copied"))
+
+
+class VistaSettings(VistaBase):
+    def __init__(self, ventana):
+        super().__init__(ventana, "grad-logs")
+        self.cabecera(t("settings.title"), t("settings.desc"))
+
+        # --- actualizaciones ---
+        self.contenido.append(seccion(t("settings.updates")))
+        caja_upd = Tarjeta()
+        fila_auto = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        fila_auto.add_css_class("item-row")
+        texto = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
+        lbl = Gtk.Label(label=t("settings.auto_update"), xalign=0)
+        lbl.add_css_class("item-title")
+        sub = Gtk.Label(label=t("settings.auto_update.desc"), xalign=0, wrap=True)
+        sub.add_css_class("item-sub")
+        texto.append(lbl)
+        texto.append(sub)
+        fila_auto.append(texto)
+        self.sw_auto = Gtk.Switch(valign=Gtk.Align.CENTER)
+        self.sw_auto.set_active(updater.autoactualizar_activado())
+        self.sw_auto.connect("state-set", self._toggle_auto)
+        fila_auto.append(self.sw_auto)
+        caja_upd.append(fila_auto)
+        caja_upd.append(FilaSimple(
+            t("settings.check_now"), f"{t('settings.current_version')} {__version__}",
+            t("settings.check_now.btn"), self._revisar_ahora))
+        self.contenido.append(caja_upd)
+
+        # --- permisos ---
+        self.contenido.append(seccion(t("settings.permissions")))
+        caja_perm = Tarjeta()
+        caja_perm.append(FilaSimple(
+            t("settings.reset_permission"), t("settings.reset_permission.desc"),
+            t("settings.reset_permission.btn"), self._reiniciar_permiso, destructivo=True))
+        self.contenido.append(caja_perm)
+
+        # --- acerca de ---
+        self.contenido.append(seccion(t("settings.about")))
+        caja_about = Tarjeta()
+        caja_about.append(FilaSimple("SOul", f"{t('settings.version')} {__version__} · Vezzu Studio"))
+        caja_about.append(FilaSimple(
+            t("settings.license"), "Vezzu Studio Source-Available License 1.0"))
+        caja_about.append(FilaSimple(
+            "GitHub", "github.com/vezzulab/soul", t("settings.open"),
+            lambda: self._abrir("https://github.com/vezzulab/soul")))
+        caja_about.append(FilaSimple(
+            "Ko-fi", "ko-fi.com/vezzustudio", t("settings.open"),
+            lambda: self._abrir("https://ko-fi.com/vezzustudio")))
+        self.contenido.append(caja_about)
+
+    def _toggle_auto(self, _sw, activo):
+        updater.set_autoactualizar(activo)
+        return False
+
+    def _revisar_ahora(self):
+        self.ventana.aviso(t("update.checking"))
+
+        def hacer():
+            return updater.buscar_actualizacion()
+
+        def listo(release, error):
+            if release and not error:
+                self.ventana._mostrar_actualizacion(release)
+            else:
+                self.ventana.aviso(t("settings.no_update"))
+            return False
+
+        en_hilo(hacer, listo)
+
+    def _reiniciar_permiso(self):
+        dlg = Adw.AlertDialog(
+            heading=t("settings.reset_permission.btn"),
+            body=t("settings.reset_permission.confirm"))
+        dlg.add_response("cancel", t("action.cancel"))
+        dlg.add_response("ok", t("settings.reset_permission.btn"))
+        dlg.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE)
+        dlg.set_default_response("cancel")
+        dlg.set_close_response("cancel")
+
+        def resp(_d, r):
+            if r != "ok":
+                return
+
+            def listo(ok, _error):
+                self.ventana.aviso(t("settings.reset_permission.done") if ok
+                                   else t("update.failed"))
+                return False
+
+            en_hilo(core.reiniciar_polkit, listo)
+
+        dlg.connect("response", resp)
+        dlg.present(self.ventana)
+
+    def _abrir(self, url):
+        try:
+            Gio.AppInfo.launch_default_for_uri(url, None)
+        except Exception:
+            subprocess.Popen(["xdg-open", url])
 
 
 # ---------------------------------------------------------------- ventana
@@ -1275,10 +1423,136 @@ class Ventana(Adw.ApplicationWindow):
         # queda abierta mucho rato, no solo al abrirla o al restaurarla
         GLib.timeout_add_seconds(40 * 60, self._revision_periodica_donacion)
 
+        # actualizaciones: al arrancar, y cada 6 horas mientras sigue
+        # abierta. No compite con el aviso de donacion (dispara a los 8s).
+        GLib.timeout_add_seconds(8, self._buscar_actualizacion)
+        GLib.timeout_add_seconds(6 * 60 * 60, self._buscar_actualizacion)
+
     def _arranque_permiso(self):
         if not core.polkit_listo():
             self._onboarding()
         return False
+
+    def _buscar_actualizacion(self):
+        if not updater.autoactualizar_activado():
+            return True
+
+        def hacer():
+            return updater.buscar_actualizacion()
+
+        def listo(release, error):
+            if release and not error and release["version"] != updater.version_omitida():
+                self._mostrar_actualizacion(release)
+            return False
+
+        en_hilo(hacer, listo)
+        return True  # sigue disparando cada 6h mientras la app este abierta
+
+    def _mostrar_actualizacion(self, release):
+        dlg = Adw.AlertDialog()
+        dlg.add_css_class("donate-dialog")
+        dlg.set_content_width(440)
+        caja = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        caja.set_size_request(380, -1)
+        caja.add_css_class("donate-head")
+
+        titulo = Gtk.Label(label=t("update.question", version=release["version"]),
+                            wrap=True, justify=Gtk.Justification.CENTER,
+                            max_width_chars=34)
+        titulo.add_css_class("donate-title")
+        caja.append(titulo)
+
+        actual = Gtk.Label(label=t("update.current", current=updater.version_actual()))
+        actual.add_css_class("donate-body")
+        caja.append(actual)
+
+        notas_titulo = Gtk.Label(label=t("update.notes"), xalign=0)
+        notas_titulo.add_css_class("donate-mockup-label")
+        caja.append(notas_titulo)
+
+        notas_scroll = Gtk.ScrolledWindow()
+        notas_scroll.set_min_content_height(0)
+        notas_scroll.set_max_content_height(200)
+        notas_scroll.set_hexpand(True)
+        notas_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+
+        lista = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        lista.add_css_class("update-notes-list")
+        lineas = [
+            ln.strip().lstrip("-*").strip()
+            for ln in (release["notas"] or "").splitlines()
+            if ln.strip()
+        ]
+        if not lineas:
+            vacio = Gtk.Label(label=t("update.no_notes"), xalign=0, wrap=True)
+            vacio.add_css_class("donate-body")
+            lista.append(vacio)
+        for linea in lineas:
+            fila = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            fila.set_valign(Gtk.Align.START)
+            punto = Gtk.Label(label="●")
+            punto.add_css_class("update-note-dot")
+            punto.set_valign(Gtk.Align.START)
+            fila.append(punto)
+            texto = Gtk.Label(label=linea, xalign=0, wrap=True,
+                               wrap_mode=Gtk.WrapMode.WORD_CHAR)
+            texto.add_css_class("update-note-text")
+            texto.set_hexpand(True)
+            fila.append(texto)
+            lista.append(fila)
+        notas_scroll.set_child(lista)
+        caja.append(notas_scroll)
+
+        dlg.set_extra_child(caja)
+        puede = updater.puede_autoactualizarse() and bool(release["url_asset"])
+        dlg.add_response("skip", t("update.skip"))
+        dlg.add_response("later", t("update.later"))
+        dlg.add_response("go", t("update.install") if puede else t("update.open_page"))
+        dlg.set_response_appearance("go", Adw.ResponseAppearance.SUGGESTED)
+        dlg.set_default_response("go")
+        dlg.set_close_response("later")
+
+        def resp(_d, r):
+            if r == "skip":
+                updater.omitir_version(release["version"])
+            elif r == "go":
+                if puede:
+                    self._descargar_actualizacion(release)
+                else:
+                    try:
+                        Gio.AppInfo.launch_default_for_uri(release["url_pagina"], None)
+                    except Exception:
+                        subprocess.Popen(["xdg-open", release["url_pagina"]])
+
+        dlg.connect("response", resp)
+        dlg.present(self)
+
+    def _descargar_actualizacion(self, release):
+        dlg = Adw.AlertDialog(
+            heading=t("update.downloading", version=release["version"]))
+        barra = Gtk.ProgressBar()
+        barra.set_margin_top(8)
+        dlg.set_extra_child(barra)
+        dlg.present(self)
+
+        def hacer():
+            return updater.descargar_actualizacion(
+                release["url_asset"],
+                progreso=lambda pct: GLib.idle_add(barra.set_fraction, pct / 100))
+
+        def listo(ruta, error):
+            dlg.force_close()
+            if error or not ruta:
+                self.aviso(t("update.failed"))
+                return False
+            try:
+                updater.instalar_actualizacion(ruta)
+                self.aviso(t("update.installed"))
+            except OSError:
+                self.aviso(t("update.failed"))
+            return False
+
+        en_hilo(hacer, listo)
 
     def _arranque_donacion(self):
         """Primera aparicion del aviso de donacion, 25s despues de abrir
@@ -1300,9 +1574,10 @@ class Ventana(Adw.ApplicationWindow):
 
         dlg = Adw.AlertDialog()
         dlg.add_css_class("donate-dialog")
+        dlg.set_content_width(420)
 
         cabecera = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        cabecera.set_halign(Gtk.Align.CENTER)
+        cabecera.set_size_request(360, -1)
         cabecera.add_css_class("donate-head")
 
         halo = Gtk.Box(width_request=68, height_request=68)
@@ -1600,6 +1875,8 @@ class Ventana(Adw.ApplicationWindow):
             self, "grad-privacy", t("privacy.title"), t("privacy.desc"), core.TAREAS_PRIVACIDAD)
         self.vistas["space"] = VistaEspacio(self)
         self.vistas["health"] = VistaSalud(self)
+        self.vistas["logs"] = VistaLogs(self)
+        self.vistas["settings"] = VistaSettings(self)
         for clave, vista in self.vistas.items():
             self.stack.add_named(vista, clave)
 
@@ -1721,6 +1998,11 @@ class Ventana(Adw.ApplicationWindow):
               radial-gradient(700px 480px at 82% 78%, rgba(79,217,138,0.13) 0%, rgba(0,0,0,0) 70%),
               radial-gradient(1180px 760px at 14% -10%, #1A5E3F 0%, #102D22 36%, #0A0D14 72%);
         }
+        .grad-logs {
+            background:
+              radial-gradient(700px 480px at 82% 78%, rgba(242,184,75,0.13) 0%, rgba(0,0,0,0) 70%),
+              radial-gradient(1180px 760px at 14% -10%, #6E5217 0%, #2E2410 36%, #0A0D14 72%);
+        }
         scrolledwindow, viewport { background: transparent; }
 
         /* ---------- páginas ---------- */
@@ -1822,7 +2104,8 @@ class Ventana(Adw.ApplicationWindow):
         .tile-size { font-size: 15px; font-weight: 800; color: #ffffff; }
 
         /* ---------- métricas ---------- */
-        .metric-value { font-size: 30px; font-weight: 800; color: #ffffff; }
+        .metric-value { font-size: 34px; font-weight: 800; color: #ffffff; }
+        .health-card { padding: 20px; min-height: 150px; }
         .metric-bar, .space-bar { min-height: 7px; }
         .metric-bar trough, .space-bar trough {
             min-height: 7px; border-radius: 6px; background: rgba(255,255,255,0.07);
@@ -1851,6 +2134,11 @@ class Ventana(Adw.ApplicationWindow):
         }
 
         /* ---------- modal de donacion ---------- */
+        /* velo detras de cualquier dialogo: la app se queda visible,
+           solo se oscurece (GTK4 no tiene difuminado real de fondo) */
+        dialog-host {
+            background-color: rgba(8,6,16,0.55);
+        }
         .donate-dialog {
             background: linear-gradient(165deg, #201A3C 0%, #140F28 55%, #0B0714 100%);
             border: 1px solid rgba(168,139,255,0.22);
@@ -1905,6 +2193,13 @@ class Ventana(Adw.ApplicationWindow):
             background: rgba(255,178,89,0.10);
             border: 1px solid rgba(255,178,89,0.25);
         }
+        .update-notes-list { padding: 2px 2px 4px 2px; }
+        .update-note-dot {
+            font-size: 6px; color: #A88BFF; margin-top: 7px;
+        }
+        .update-note-text {
+            font-size: 13.5px; color: #D8D2EE; line-height: 1.4;
+        }
         """
         provider = Gtk.CssProvider()
         provider.load_from_data(css.encode("utf-8"))
@@ -1917,6 +2212,7 @@ class SoulApp(Adw.Application):
         super().__init__(application_id="studio.vezzu.SOul")
 
     def do_activate(self):
+        core.integrar_appimage()
         Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.FORCE_DARK)
         Ventana(self).present()
 

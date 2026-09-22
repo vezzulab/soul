@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.AppImage
+
+# Cloudflare Workers
+server/.wrangler/
+server/node_modules/
+
+# Empaquetado AppImage: herramientas descargadas y AppDir generado
+packaging/appimage/tools/
+packaging/appimage/AppDir/

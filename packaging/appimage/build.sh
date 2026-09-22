@@ -33,8 +33,8 @@ cp "$RAIZ/packaging/studio.vezzu.soul.policy" "$APPDIR/usr/lib/soul/packaging/"
 echo "==> Lanzador, icono y AppRun"
 cp "$AQUI/studio.vezzu.SOul.desktop" "$APPDIR/usr/share/applications/"
 cp "$AQUI/studio.vezzu.SOul.desktop" "$APPDIR/"
-cp "$RAIZ/web/assets/soul.svg" "$APPDIR/usr/share/icons/hicolor/scalable/apps/studio.vezzu.SOul.svg"
-cp "$RAIZ/web/assets/soul.svg" "$APPDIR/studio.vezzu.SOul.svg"
+cp "$RAIZ/assets/soul.svg" "$APPDIR/usr/share/icons/hicolor/scalable/apps/studio.vezzu.SOul.svg"
+cp "$RAIZ/assets/soul.svg" "$APPDIR/studio.vezzu.SOul.svg"
 install -m 0755 "$AQUI/AppRun" "$APPDIR/AppRun"
 
 # ejecutable señuelo: linuxdeploy exige un binario ELF real para el
@@ -53,7 +53,7 @@ export DEPLOY_GTK_VERSION=4
     --library /usr/lib64/libgtk-4.so.1 \
     --library /usr/lib64/libadwaita-1.so.0 \
     --desktop-file "$AQUI/studio.vezzu.SOul.desktop" \
-    --icon-file "$RAIZ/web/assets/soul.svg" \
+    --icon-file "$RAIZ/assets/soul.svg" \
     --plugin gtk
 
 echo "==> Generando el AppImage"

@@ -20,6 +20,8 @@ STRINGS = {
     "nav.privacy": ("Privacidad", "Privacy"),
     "nav.space": ("Mapa de espacio", "Space Lens"),
     "nav.health": ("Salud del equipo", "Health"),
+    "nav.logs": ("Registro de problemas", "Problem log"),
+    "nav.settings": ("Ajustes", "Settings"),
 
     # --- smart scan ---
     "smart.title": ("Escaneo inteligente", "Smart Scan"),
@@ -297,6 +299,61 @@ STRINGS = {
                          "I don't see that donation yet. Payments can take a "
                          "few minutes to arrive — try again in a bit."),
 
+    # --- actualizaciones ---
+    "update.title": ("Actualización disponible", "Update available"),
+    "update.question": ("Hay una versión nueva: {version}", "There's a new version: {version}"),
+    "update.current": ("Tienes la {current}", "You have {current}"),
+    "update.notes": ("Qué trae esta versión", "What's new in this version"),
+    "update.no_notes": ("Sin notas de esta versión.", "No notes for this version."),
+    "update.later": ("Luego", "Later"),
+    "update.skip": ("No avisar de esta versión", "Don't ask about this version"),
+    "update.install": ("Actualizar", "Update"),
+    "update.open_page": ("Ver en GitHub", "View on GitHub"),
+    "update.downloading": ("Descargando la versión {version}…", "Downloading version {version}…"),
+    "update.installed": ("Listo. Cierra y vuelve a abrir SOul para usar la nueva versión.",
+                         "Done. Close and reopen SOul to use the new version."),
+    "update.failed": ("No se pudo descargar la actualización. Inténtalo de nuevo más tarde.",
+                      "Couldn't download the update. Try again later."),
+    "update.checking": ("Buscando actualizaciones…", "Checking for updates…"),
+
+    # --- settings ---
+    "settings.title": ("Ajustes", "Settings"),
+    "settings.desc": ("Cómo se comporta SOul, y de qué versión estás.",
+                      "How SOul behaves, and which version you're on."),
+    "settings.updates": ("Actualizaciones", "Updates"),
+    "settings.auto_update": ("Buscar actualizaciones automáticamente",
+                             "Check for updates automatically"),
+    "settings.auto_update.desc": (
+        "Al abrir SOul y cada 6 horas mientras sigue abierta. Se puede "
+        "buscar a mano en cualquier momento, esté encendido o no.",
+        "On startup and every 6 hours while it stays open. You can always "
+        "check by hand below, whether this is on or off.",
+    ),
+    "settings.check_now": ("Buscar ahora", "Check now"),
+    "settings.check_now.btn": ("Revisar", "Check"),
+    "settings.current_version": ("Versión instalada:", "Installed version:"),
+    "settings.no_update": ("Ya tienes la última versión.", "You're already on the latest version."),
+    "settings.permissions": ("Permisos", "Permissions"),
+    "settings.reset_permission": ("Permiso de administrador", "Administrator permission"),
+    "settings.reset_permission.desc": (
+        "Quita el permiso instalado. La próxima limpieza que lo necesite "
+        "volverá a pedir la contraseña, como en la primera vez.",
+        "Removes the installed permission. The next cleanup that needs it "
+        "will ask for the password again, like the first time.",
+    ),
+    "settings.reset_permission.btn": ("Reiniciar permiso", "Reset permission"),
+    "settings.reset_permission.confirm": (
+        "¿Quitar el permiso instalado? Vas a tener que autorizarlo de "
+        "nuevo la próxima vez que haga falta.",
+        "Remove the installed permission? You'll have to authorize it "
+        "again the next time it's needed.",
+    ),
+    "settings.reset_permission.done": ("Permiso reiniciado.", "Permission reset."),
+    "settings.about": ("Acerca de", "About"),
+    "settings.version": ("Versión", "Version"),
+    "settings.license": ("Licencia", "License"),
+    "settings.open": ("Abrir", "Open"),
+
     # --- onboarding / permisos ---
     "onboard.title": ("Un permiso, una sola vez", "One permission, just once"),
     "onboard.body": (
@@ -348,6 +405,9 @@ STRINGS = {
     ),
     "log.empty": ("No se detectó ningún problema en los últimos 3 días.",
                   "No problems detected in the last 3 days."),
+    "log.copy": ("Copiar reporte", "Copy report"),
+    "log.copied": ("Reporte copiado. Pégalo donde lo necesites.",
+                   "Report copied. Paste it wherever you need it."),
     "log.crash": ("{app} se cerró de golpe {veces} vez", "{app} crashed {veces} time"),
     "log.crash_pl": ("{app} se cerró de golpe {veces} veces", "{app} crashed {veces} times"),
     "log.crash.desc": (

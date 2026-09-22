@@ -192,9 +192,69 @@ def verificar_donacion():
     return False
 
 
+def integrar_appimage():
+    """Copia el .desktop y el icono del AppImage a las carpetas propias
+    del usuario (sin pedir permisos: son solo suyas). Sin esto, la barra
+    de tareas y el menú de aplicaciones no saben qué icono mostrar,
+    porque el AppImage no está "instalado" en ningún lado que el
+    escritorio conozca.
+
+    Se repite en cada arranque a propósito, no solo la primera vez: son
+    dos archivos chicos, y así una actualización del icono se refleja
+    sola en vez de quedar pegada a la versión con la que se integró la
+    primera vez."""
+    appdir = os.environ.get("APPDIR")
+    appimage = os.environ.get("APPIMAGE")
+    if not appdir or not appimage:
+        return
+    try:
+        icon_origen = os.path.join(
+            appdir, "usr", "share", "icons", "hicolor", "scalable", "apps",
+            "studio.vezzu.SOul.svg")
+        icon_destino_dir = os.path.join(
+            HOME, ".local", "share", "icons", "hicolor", "scalable", "apps")
+        os.makedirs(icon_destino_dir, exist_ok=True)
+        if os.path.isfile(icon_origen):
+            shutil.copyfile(
+                icon_origen,
+                os.path.join(icon_destino_dir, "studio.vezzu.SOul.svg"))
+
+        apps_dir = os.path.join(HOME, ".local", "share", "applications")
+        os.makedirs(apps_dir, exist_ok=True)
+        with open(os.path.join(apps_dir, "studio.vezzu.SOul.desktop"), "w") as f:
+            f.write(
+                "[Desktop Entry]\n"
+                "Type=Application\n"
+                "Name=SOul\n"
+                "GenericName=System care\n"
+                "Comment=SO + alma: el alma de tu sistema, en simple\n"
+                f"Exec={appimage}\n"
+                "Icon=studio.vezzu.SOul\n"
+                "Terminal=false\n"
+                "Categories=System;Monitor;Utility;\n"
+            )
+
+        subprocess.run(["update-desktop-database", apps_dir],
+                        capture_output=True, timeout=10)
+    except OSError:
+        pass
+
+
 def polkit_listo():
     """¿Ya está puesta la política que evita pedir la contraseña siempre?"""
     return os.path.isfile(POLITICA)
+
+
+def reiniciar_polkit():
+    """Quita la política instalada para que SOul vuelva a ofrecer el
+    permiso desde cero, como si fuera la primera vez. Pide contraseña
+    una vez (un solo comando fijo, sin datos variables)."""
+    try:
+        subprocess.run(["pkexec", "rm", "-f", POLITICA],
+                        check=True, capture_output=True, text=True, timeout=60)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        return False
+    return not os.path.isfile(POLITICA)
 
 
 def instalar_polkit(origen):
@@ -670,23 +730,28 @@ def procesos_vivos(limite=40):
 
 
 def apps_pesadas(limite=8):
-    """Procesos agrupados por nombre. Doble filtro: lista y usuario."""
+    """Procesos agrupados por nombre amigable (los mismos que junta
+    'Procesos en vivo': Firefox con sus procesos hijos cuenta como una
+    sola app, no como cuatro filas sueltas). Doble filtro: lista y
+    usuario."""
     try:
         mi_usuario = psutil.Process().username()
     except Exception:
         mi_usuario = None
     agrupado = {}
-    for p in psutil.process_iter(["pid", "name", "memory_info", "username"]):
+    for p in psutil.process_iter(["pid", "name", "memory_info", "username", "cmdline"]):
         try:
             if mi_usuario and p.info["username"] != mi_usuario:
                 continue
-            nombre = p.info["name"] or "?"
-            if nombre in PROTEGIDOS:
+            nombre_crudo = p.info["name"] or "?"
+            if nombre_crudo in PROTEGIDOS:
                 continue
+            amigable, _desc, _reconocido = _nombre_amigable(
+                nombre_crudo, p.info.get("cmdline") or [])
             mi = p.info["memory_info"]
-            agrupado.setdefault(nombre, {"bytes": 0, "pids": []})
-            agrupado[nombre]["bytes"] += mi.rss if mi else 0
-            agrupado[nombre]["pids"].append(p.info["pid"])
+            agrupado.setdefault(amigable, {"bytes": 0, "pids": []})
+            agrupado[amigable]["bytes"] += mi.rss if mi else 0
+            agrupado[amigable]["pids"].append(p.info["pid"])
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
     orden = sorted(agrupado.items(), key=lambda x: -x[1]["bytes"])
