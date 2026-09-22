@@ -1692,14 +1692,26 @@ class Ventana(Adw.ApplicationWindow):
         barra = Gtk.ProgressBar()
         barra.set_margin_top(8)
         dlg.set_extra_child(barra)
+        dlg.add_response("cancel", t("action.cancel"))
+        dlg.set_close_response("cancel")
+
+        cancelado = {"v": False}
+
+        def resp(_d, r):
+            if r == "cancel":
+                cancelado["v"] = True
+        dlg.connect("response", resp)
         dlg.present(self)
 
         def hacer():
             return updater.descargar_actualizacion(
                 release["url_asset"],
-                progreso=lambda pct: GLib.idle_add(barra.set_fraction, pct / 100))
+                progreso=lambda pct: GLib.idle_add(barra.set_fraction, pct / 100),
+                cancelado=lambda: cancelado["v"])
 
         def listo(ruta, error):
+            if cancelado["v"]:
+                return False
             dlg.force_close()
             if error or not ruta:
                 self.aviso(t("update.failed"))

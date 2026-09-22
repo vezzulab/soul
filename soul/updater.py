@@ -200,10 +200,16 @@ def puede_autoactualizarse():
     return os.access(ruta, os.W_OK) and os.access(os.path.dirname(ruta), os.W_OK)
 
 
-def descargar_actualizacion(url_asset, progreso=None):
+class DescargaCancelada(Exception):
+    pass
+
+
+def descargar_actualizacion(url_asset, progreso=None, cancelado=None):
     """Descarga el AppImage nuevo junto al actual (para que el reemplazo
     sea un simple renombrado) y devuelve la ruta temporal. progreso(pct)
-    se llama con el porcentaje descargado, si se da."""
+    se llama con el porcentaje descargado, si se da. cancelado, si se
+    da, es una funcion sin argumentos: si devuelve True en cualquier
+    momento, se corta la descarga y se limpia el archivo parcial."""
     destino_final = appimage_actual()
     carpeta = os.path.dirname(destino_final)
     parcial = os.path.join(carpeta, ".SOul-actualizacion.part")
@@ -217,6 +223,8 @@ def descargar_actualizacion(url_asset, progreso=None):
             ultimo = -1
             with open(parcial, "wb") as out:
                 while True:
+                    if cancelado and cancelado():
+                        raise DescargaCancelada()
                     trozo = resp.read(1 << 16)
                     if not trozo:
                         break
