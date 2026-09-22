@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1.0/policyconfig.dtd">
+<policyconfig>
+  <vendor>Vezzu Studio</vendor>
+  <vendor_url>https://github.com/vezzulab/soul</vendor_url>
+
+  <!--
+    Permite que SOul ejecute SU ayudante de mantenimiento sin pedir la
+    contraseña cada vez. El ayudante no acepta comandos libres: solo
+    limpiar caché de paquetes, recortar registros viejos, borrar volcados
+    de fallos, quitar componentes Flatpak sin usar y desinstalar una app
+    Flatpak concreta (con el identificador validado).
+
+    Esto solo aplica al usuario que tiene la sesión activa delante del
+    equipo (allow_active). Las sesiones remotas (allow_inactive) siguen
+    pidiendo contraseña de administrador.
+  -->
+  <action id="studio.vezzu.soul.maintenance">
+    <description>Run SOul maintenance tasks</description>
+    <description xml:lang="es">Ejecutar tareas de mantenimiento de SOul</description>
+    <message>SOul needs permission to clean system caches and logs</message>
+    <message xml:lang="es">SOul necesita permiso para limpiar cachés y registros del sistema</message>
+    <icon_name>studio.vezzu.SOul</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/bin/soul-mantenimiento.sh</annotate>
+    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+  </action>
+</policyconfig>

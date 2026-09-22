@@ -1,0 +1,47 @@
+Vezzu Studio Source-Available License 1.0
+Copyright (c) 2026 Vezzu Studio. All rights reserved.
+
+This is not an OSI-approved open source license. The source code is
+published for transparency, so anyone can read it and confirm what it
+does before running it on their machine — not as a grant of the rights
+associated with free/open-source licenses.
+
+1. USE
+   You may download, install and use SOul, free of charge, on any
+   number of machines you own or administer, for personal or
+   organizational use.
+
+2. VIEWING AND BUILDING
+   You may read this source code and compile it yourself for your own
+   use, to verify what the program does or to use it on a platform
+   without a prebuilt release.
+
+3. WHAT YOU MAY NOT DO
+   Without prior written permission from Vezzu Studio, you may not:
+   a. Redistribute this software, modified or unmodified, whether for
+      a fee or free of charge, under this name or another;
+   b. Publish a modified version, a fork, or a derivative work;
+   c. Remove or alter the donation prompt, copyright notices, or this
+      license from any copy you distribute;
+   d. Use the "SOul" or "Vezzu Studio" names, or their logos, to
+      promote a derivative product.
+
+4. DONATIONS
+   SOul is offered free of charge. Donations through Ko-fi
+   (https://ko-fi.com/vezzustudio) are voluntary and support its
+   continued development, but are never required to use the software.
+
+5. NO WARRANTY
+   THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+   NONINFRINGEMENT. IN NO EVENT SHALL VEZZU STUDIO BE LIABLE FOR ANY
+   CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THIS
+   SOFTWARE.
+
+6. CHANGES TO THIS LICENSE
+   Vezzu Studio may offer future versions of SOul under a different
+   license. This license applies to the version of the source it
+   accompanies.
+
+Contact: https://github.com/vezzulab · https://ko-fi.com/vezzustudio

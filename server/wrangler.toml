@@ -1,0 +1,9 @@
+name = "soul-donaciones"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# El namespace de KV se crea con `wrangler kv namespace create CODIGOS`
+# y el id que te devuelva va aqui. Ver README.md paso 4.
+[[kv_namespaces]]
+binding = "CODIGOS"
+id = "d5ef4f0e81474efa87b315d5fb8dbb95"

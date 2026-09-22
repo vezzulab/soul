@@ -1,0 +1,15 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Confirma que un código de donación apareció de verdad en un pago de Ko-fi, sin guardar nombres, correos ni montos. Corre gratis en Cloudflare Workers (hasta 100.000 peticiones al día sin costo).",
+  "main": "worker.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "wrangler": "^4.136.2"
+  }
+}

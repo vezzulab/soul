@@ -1,0 +1,35 @@
+#!/bin/bash
+# AppRun de SOul (Vezzu Studio).
+#
+# SOul es una app Python + GTK4/libadwaita (PyGObject). Este AppImage
+# empaqueta el código de SOul y las librerías de GTK4/Adwaita, pero
+# depende de que el sistema tenga python3 con python3-gobject (gi) — algo
+# que ya trae cualquier escritorio GNOME/KDE moderno. Empaquetar un
+# intérprete Python completo aquí dentro es frágil y poco honesto sobre
+# lo que realmente hace falta: se prefiere fallar claro si falta algo.
+set -eu
+HERE="$(cd "$(dirname "$(readlink -f "${0}")")" && pwd)"
+
+export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
+export GI_TYPELIB_PATH="${HERE}/usr/lib/girepository-1.0:${HERE}/usr/lib/x86_64-linux-gnu/girepository-1.0:${GI_TYPELIB_PATH:-}"
+export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas:${GSETTINGS_SCHEMA_DIR:-}"
+export XDG_DATA_DIRS="${HERE}/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+if [ -f "${HERE}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" ]; then
+    export GDK_PIXBUF_MODULE_FILE="${HERE}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+fi
+
+if ! python3 -c "
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+" >/dev/null 2>&1; then
+    MSG="SOul necesita python3-gobject, gtk4 y libadwaita instalados en el sistema (ya vienen con GNOME/KDE moderno en Fedora)."
+    if command -v zenity >/dev/null 2>&1; then
+        zenity --error --text="$MSG"
+    else
+        echo "$MSG" >&2
+    fi
+    exit 1
+fi
+
+exec python3 "${HERE}/usr/lib/soul/soul-app.py" "$@"

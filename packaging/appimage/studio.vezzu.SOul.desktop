@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SOul
+GenericName=System care
+Comment=SO + alma: el alma de tu sistema, en simple
+Exec=soul-app
+Icon=studio.vezzu.SOul
+Terminal=false
+Categories=System;Monitor;Utility;
