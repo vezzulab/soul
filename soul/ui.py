@@ -1637,7 +1637,7 @@ class Ventana(Adw.ApplicationWindow):
         lista = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         lista.add_css_class("update-notes-list")
         lineas = [
-            ln.strip().lstrip("-*").strip()
+            ln.strip().lstrip("#").strip().lstrip("-*").strip().replace("**", "")
             for ln in (release["notas"] or "").splitlines()
             if ln.strip()
         ]
@@ -2315,11 +2315,18 @@ class Ventana(Adw.ApplicationWindow):
             background: rgba(255,90,90,0.75);
         }
 
+        /* fondo solido de la ventana: sin esto, cuando un dialogo cubre
+           el contenido, GTK deja de repintar lo que queda tapado y se
+           ve el escritorio a traves en vez de la app oscurecida */
+        window {
+            background-color: #0B0714;
+        }
+
         /* ---------- modal de donacion ---------- */
         /* velo detras de cualquier dialogo: la app se queda visible,
            solo se oscurece (GTK4 no tiene difuminado real de fondo) */
         dialog-host {
-            background-color: rgba(8,6,16,0.55);
+            background-color: rgba(8,6,16,0.72);
         }
         /* estilo "cristal" para TODOS los dialogos de confirmacion (cerrar
            app, desinstalar, limpiar, onboarding...), no solo donacion/
