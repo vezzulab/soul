@@ -8,7 +8,6 @@ _ARCHIVO_IDIOMA = os.path.join(os.path.expanduser("~"), ".local", "share", "soul
 STRINGS = {
     # --- general ---
     "app.name": ("SOul", "SOul"),
-    "app.tagline": ("SO + alma — el alma de tu sistema", "OS + soul — the soul of your system"),
     "app.subtitle": ("Cuidado completo para tu Linux", "Complete care for your Linux"),
 
     # --- navegación ---
@@ -320,6 +319,20 @@ STRINGS = {
     "settings.title": ("Ajustes", "Settings"),
     "settings.desc": ("Cómo se comporta SOul, y de qué versión estás.",
                       "How SOul behaves, and which version you're on."),
+    "settings.general": ("General", "General"),
+    "settings.language": ("Idioma", "Language"),
+    "settings.notifications": ("Notificaciones", "Notifications"),
+    "settings.notifications.desc": (
+        "Avisos del sistema, como cuando el procesador o la memoria "
+        "llevan un rato al límite.",
+        "System alerts, like when the processor or memory have been "
+        "maxed out for a while.",
+    ),
+    "settings.autostart": ("Iniciar con el sistema", "Start with the system"),
+    "settings.autostart.desc": (
+        "Abre SOul solo al encender el equipo (minimizado en la bandeja).",
+        "Opens SOul automatically on startup (minimized to the tray).",
+    ),
     "settings.updates": ("Actualizaciones", "Updates"),
     "settings.auto_update": ("Buscar actualizaciones automáticamente",
                              "Check for updates automatically"),
@@ -405,6 +418,13 @@ STRINGS = {
     ),
     "log.empty": ("No se detectó ningún problema en los últimos 3 días.",
                   "No problems detected in the last 3 days."),
+    "log.live": ("Actividad en vivo", "Live activity"),
+    "log.live.desc": (
+        "Lo último que registró el sistema, tal cual, sin traducir. "
+        "Para cuando quieres ver el detalle real, no solo el resumen.",
+        "The system's most recent entries, as-is, untranslated. "
+        "For when you want the real detail, not just the summary.",
+    ),
     "log.copy": ("Copiar reporte", "Copy report"),
     "log.copied": ("Reporte copiado. Pégalo donde lo necesites.",
                    "Report copied. Paste it wherever you need it."),
@@ -447,6 +467,15 @@ STRINGS = {
     ),
     "close.tray": ("Dejar en la barra", "Keep in tray"),
     "close.quit": ("Cerrar del todo", "Quit completely"),
+    "tray.quit": ("Salir", "Quit"),
+
+    # --- notificaciones ---
+    "notif.cpu.title": ("El procesador está al límite", "Your processor is maxed out"),
+    "notif.cpu.body": ("Lleva un rato al {pct}%. Revisa Rendimiento para ver qué lo está usando.",
+                       "It's been at {pct}% for a while. Check Performance to see what's using it."),
+    "notif.mem.title": ("La memoria se está llenando", "Memory is filling up"),
+    "notif.mem.body": ("Está al {pct}%. Revisa Rendimiento para cerrar algo que no uses.",
+                       "It's at {pct}%. Check Performance to close something you're not using."),
 
     # --- seguridad ---
     "safe.note": (

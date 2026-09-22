@@ -72,8 +72,9 @@ def instalar_icono():
 class Bandeja:
     """Publica el icono y avisa cuando el usuario hace clic."""
 
-    def __init__(self, al_activar, titulo="SOul", tooltip="SOul by Vezzu Studio"):
+    def __init__(self, al_activar, al_menu=None, titulo="SOul", tooltip="SOul by Vezzu Studio"):
         self.al_activar = al_activar
+        self.al_menu = al_menu or al_activar
         self.titulo = titulo
         self.tooltip = tooltip
         self.icon_path = instalar_icono()
@@ -117,8 +118,10 @@ class Bandeja:
 
     # --- interfaz
     def _metodo(self, _con, _sender, _path, _iface, metodo, _params, invocacion):
-        if metodo in ("Activate", "SecondaryActivate", "ContextMenu"):
+        if metodo == "Activate":
             GLib.idle_add(self.al_activar)
+        elif metodo in ("SecondaryActivate", "ContextMenu"):
+            GLib.idle_add(self.al_menu)
         invocacion.return_value(None)
 
     def _propiedad(self, _con, _sender, _path, _iface, prop):

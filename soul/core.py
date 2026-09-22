@@ -1094,6 +1094,29 @@ def _errores_disco_recientes(dias=3):
         return 0
 
 
+def actividad_reciente(n=12):
+    """Las ultimas lineas reales del sistema, sin traducir ni filtrar —
+    a diferencia de registro_problemas(), que solo muestra lo que
+    reconoce con certeza. Esta es la version honesta 'en vivo' para
+    quien sí quiere ver el detalle tal cual, no una interpretacion."""
+    try:
+        out = subprocess.run(
+            ["journalctl", "-n", str(n), "-o", "short-precise", "--no-pager"],
+            capture_output=True, text=True, timeout=8).stdout
+    except Exception:
+        return []
+    lineas = []
+    for linea in out.splitlines():
+        linea = linea.strip()
+        if not linea or linea.startswith("--"):
+            continue
+        partes = linea.split(" ", 3)
+        hora = partes[2] if len(partes) > 2 else ""
+        resto = partes[3] if len(partes) > 3 else linea
+        lineas.append({"hora": hora, "texto": resto})
+    return lineas[-n:]
+
+
 def registro_problemas(dias=3):
     """Version 'para cavernicolas' del log del sistema. Cada item ya
     viene en frases hechas por el llamador (i18n), esto solo junta los
@@ -1220,3 +1243,68 @@ def fmt_uptime(segundos, idioma="es"):
     if dias:
         return f"{dias} day{'s' if dias != 1 else ''}, {horas} h"
     return f"{horas} h {mins} min" if horas else f"{mins} min"
+
+
+# ====================================================================
+#  AJUSTES: notificaciones e inicio con el sistema
+# ====================================================================
+
+ARCHIVO_SIN_NOTIFICACIONES = os.path.join(HOME, ".local", "share", "soul", "sin_notificaciones")
+AUTOSTART_DESKTOP = os.path.join(HOME, ".config", "autostart", "studio.vezzu.SOul.desktop")
+
+
+def notificaciones_activadas():
+    return not os.path.isfile(ARCHIVO_SIN_NOTIFICACIONES)
+
+
+def set_notificaciones(activo):
+    try:
+        if activo:
+            if os.path.isfile(ARCHIVO_SIN_NOTIFICACIONES):
+                os.remove(ARCHIVO_SIN_NOTIFICACIONES)
+        else:
+            os.makedirs(os.path.dirname(ARCHIVO_SIN_NOTIFICACIONES), exist_ok=True)
+            open(ARCHIVO_SIN_NOTIFICACIONES, "w").close()
+    except OSError:
+        pass
+
+
+def inicio_con_sistema_activado():
+    return os.path.isfile(AUTOSTART_DESKTOP)
+
+
+def _comando_lanzamiento():
+    """Cómo relanzar SOul: el propio AppImage si corre como tal, si no
+    el mismo intérprete y script con el que se está ejecutando ahora."""
+    appimage = os.environ.get("APPIMAGE")
+    if appimage:
+        return f'"{appimage}" --minimized'
+    import sys
+    entrada = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "soul-app.py")
+    return f'{sys.executable} "{entrada}" --minimized'
+
+
+def set_inicio_con_sistema(activo):
+    """Usa el autostart estándar de XDG (~/.config/autostart), que no
+    necesita permisos de administrador: es una carpeta del usuario que
+    cualquier escritorio (GNOME, KDE...) revisa al iniciar sesión."""
+    try:
+        if not activo:
+            if os.path.isfile(AUTOSTART_DESKTOP):
+                os.remove(AUTOSTART_DESKTOP)
+            return True
+        os.makedirs(os.path.dirname(AUTOSTART_DESKTOP), exist_ok=True)
+        with open(AUTOSTART_DESKTOP, "w") as f:
+            f.write(
+                "[Desktop Entry]\n"
+                "Type=Application\n"
+                "Name=SOul\n"
+                f"Exec={_comando_lanzamiento()}\n"
+                "Icon=studio.vezzu.SOul\n"
+                "Terminal=false\n"
+                "X-GNOME-Autostart-enabled=true\n"
+            )
+        return True
+    except OSError:
+        return False

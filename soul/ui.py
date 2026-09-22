@@ -5,7 +5,9 @@ principal con degradado propio por módulo.
 """
 import os
 import subprocess
+import sys
 import threading
+import time
 
 import gi
 
@@ -696,13 +698,20 @@ class VistaRendimiento(VistaBase):
         self.caja_apps = Tarjeta()
         self.contenido.append(self.caja_apps)
 
-        self.contenido.append(seccion(t("perf.autostart"), t("perf.autostart.desc")))
+        columnas = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        columnas.set_homogeneous(True)
+        col_izq = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        col_izq.append(seccion(t("perf.autostart"), t("perf.autostart.desc")))
         self.caja_auto = Tarjeta()
-        self.contenido.append(self.caja_auto)
+        col_izq.append(self.caja_auto)
+        columnas.append(col_izq)
 
-        self.contenido.append(seccion(t("perf.failed"), t("perf.failed.desc")))
+        col_der = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        col_der.append(seccion(t("perf.failed"), t("perf.failed.desc")))
         self.caja_fail = Tarjeta()
-        self.contenido.append(self.caja_fail)
+        col_der.append(self.caja_fail)
+        columnas.append(col_der)
+        self.contenido.append(columnas)
 
         self.refrescar()
 
@@ -775,42 +784,61 @@ class VistaApps(VistaBase):
         self.cabecera(t("apps.title"), t("apps.desc"))
 
         self.contenido.append(seccion(t("apps.updates")))
-        self.caja_upd = Tarjeta()
-        self.contenido.append(self.caja_upd)
+        self.flow_upd = self._flow()
+        self.contenido.append(self.flow_upd)
 
         self.contenido.append(seccion(t("apps.installed")))
-        self.caja_apps = Tarjeta()
-        self.contenido.append(self.caja_apps)
+        self.flow_apps = self._flow()
+        self.contenido.append(self.flow_apps)
         self.refrescar()
 
-    def _vaciar(self, caja):
-        hijo = caja.get_first_child()
+    @staticmethod
+    def _flow():
+        f = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE)
+        f.set_max_children_per_line(3)
+        f.set_min_children_per_line(1)
+        f.set_column_spacing(14)
+        f.set_row_spacing(14)
+        f.set_homogeneous(True)
+        return f
+
+    @staticmethod
+    def _tarjeta(fila):
+        caja = Gtk.Box(valign=Gtk.Align.CENTER)
+        caja.add_css_class("card")
+        caja.set_size_request(340, -1)
+        fila.set_valign(Gtk.Align.CENTER)
+        caja.append(fila)
+        return caja
+
+    def _vaciar(self, flow):
+        hijo = flow.get_first_child()
         while hijo:
             sig = hijo.get_next_sibling()
-            caja.remove(hijo)
+            flow.remove(hijo)
             hijo = sig
 
     def refrescar(self):
-        self._vaciar(self.caja_upd)
-        self.caja_upd.append(FilaSimple(t("apps.checking")))
+        self._vaciar(self.flow_upd)
+        self.flow_upd.append(self._tarjeta(FilaSimple(t("apps.checking"))))
         en_hilo(core.buscar_actualizaciones, self._pinta_upd)
         en_hilo(lambda: core.apps_instaladas(60), self._pinta_apps)
 
     def _pinta_upd(self, res, _e):
-        self._vaciar(self.caja_upd)
+        self._vaciar(self.flow_upd)
         res = res or {"dnf": 0, "flatpak": 0}
         total = res["dnf"] + res["flatpak"]
         if total == 0:
-            self.caja_upd.append(FilaSimple(t("apps.no_updates")))
+            self.flow_upd.append(self._tarjeta(FilaSimple(t("apps.no_updates"))))
         else:
             if res["dnf"]:
-                self.caja_upd.append(FilaSimple("Fedora", f"{res['dnf']}"))
+                self.flow_upd.append(self._tarjeta(FilaSimple("Fedora", f"{res['dnf']}")))
             if res["flatpak"]:
-                self.caja_upd.append(FilaSimple("Flatpak", f"{res['flatpak']}"))
+                self.flow_upd.append(self._tarjeta(FilaSimple("Flatpak", f"{res['flatpak']}")))
         return False
 
     def _pinta_apps(self, apps, _e):
-        self._vaciar(self.caja_apps)
+        self._vaciar(self.flow_apps)
         for a in (apps or []):
             if a["flatpak"]:
                 # solo Flatpak se puede quitar desde aquí: es autocontenido
@@ -818,7 +846,7 @@ class VistaApps(VistaBase):
                                   lambda app=a: self._desinstalar(app), destructivo=True)
             else:
                 fila = FilaSimple(a["nombre"], "Fedora")
-            self.caja_apps.append(fila)
+            self.flow_apps.append(self._tarjeta(fila))
         return False
 
     def _desinstalar(self, app):
@@ -1104,19 +1132,59 @@ class VistaLogs(VistaBase):
         super().__init__(ventana, "grad-logs")
         self.cabecera(t("log.title"), t("log.desc"))
 
-        fila_top = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        fila_top.set_halign(Gtk.Align.END)
+        columnas = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        columnas.set_homogeneous(True)
+        self.contenido.append(columnas)
+
+        col_izq = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        fila_top = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        cab_izq = seccion(t("log.title"))
+        cab_izq.set_hexpand(True)
+        fila_top.append(cab_izq)
         self.btn_copiar = Gtk.Button(label=t("log.copy"))
         self.btn_copiar.add_css_class("pill")
+        self.btn_copiar.set_valign(Gtk.Align.START)
         self.btn_copiar.connect("clicked", self._copiar)
         fila_top.append(self.btn_copiar)
-        self.contenido.append(fila_top)
-
+        col_izq.append(fila_top)
         self.caja_log = Tarjeta()
-        self.contenido.append(self.caja_log)
+        col_izq.append(self.caja_log)
         self._items = []
+        columnas.append(col_izq)
+
+        col_der = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        col_der.append(seccion(t("log.live"), t("log.live.desc")))
+        term_scroll = Gtk.ScrolledWindow()
+        term_scroll.set_vexpand(True)
+        term_scroll.set_min_content_height(420)
+        term_scroll.add_css_class("terminal-live")
+        self.vista_vivo = Gtk.TextView(
+            editable=False, cursor_visible=False, wrap_mode=Gtk.WrapMode.WORD_CHAR,
+            left_margin=14, right_margin=14, top_margin=12, bottom_margin=12)
+        self.vista_vivo.add_css_class("terminal-live-text")
+        term_scroll.set_child(self.vista_vivo)
+        col_der.append(term_scroll)
+        columnas.append(col_der)
 
         self.refrescar()
+        self._refrescar_vivo()
+        GLib.timeout_add_seconds(4, self._tick_vivo)
+
+    def _tick_vivo(self):
+        if self.get_mapped():
+            self._refrescar_vivo()
+        return True
+
+    def _refrescar_vivo(self):
+        en_hilo(core.actividad_reciente, self._pinta_vivo)
+
+    def _pinta_vivo(self, lineas, _e):
+        buf = self.vista_vivo.get_buffer()
+        texto = "\n".join(f"[{it['hora']}] {it['texto']}" for it in (lineas or []))
+        buf.set_text(texto or t("log.empty"))
+        buf.place_cursor(buf.get_end_iter())
+        self.vista_vivo.scroll_to_iter(buf.get_end_iter(), 0, False, 0, 0)
+        return False
 
     def _vaciar(self, caja):
         hijo = caja.get_first_child()
@@ -1181,6 +1249,39 @@ class VistaSettings(VistaBase):
         super().__init__(ventana, "grad-logs")
         self.cabecera(t("settings.title"), t("settings.desc"))
 
+        # --- general ---
+        self.contenido.append(seccion(t("settings.general")))
+        caja_gen = Tarjeta()
+
+        fila_idioma = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        fila_idioma.add_css_class("item-row")
+        texto_i = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
+        li = Gtk.Label(label=t("settings.language"), xalign=0)
+        li.add_css_class("item-title")
+        texto_i.append(li)
+        fila_idioma.append(texto_i)
+        idioma_caja = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self.btn_es = Gtk.ToggleButton(label="ES")
+        self.btn_en = Gtk.ToggleButton(label="EN")
+        for b in (self.btn_es, self.btn_en):
+            b.add_css_class("lang-btn")
+        self.btn_es.set_active(get_idioma() == "es")
+        self.btn_en.set_active(get_idioma() == "en")
+        self.btn_es.connect("toggled", lambda b: self._idioma("es", b))
+        self.btn_en.connect("toggled", lambda b: self._idioma("en", b))
+        idioma_caja.append(self.btn_es)
+        idioma_caja.append(self.btn_en)
+        fila_idioma.append(idioma_caja)
+        caja_gen.append(fila_idioma)
+
+        caja_gen.append(self._fila_switch(
+            t("settings.notifications"), t("settings.notifications.desc"),
+            core.notificaciones_activadas(), self._toggle_notif))
+        caja_gen.append(self._fila_switch(
+            t("settings.autostart"), t("settings.autostart.desc"),
+            core.inicio_con_sistema_activado(), self._toggle_autostart))
+        self.contenido.append(caja_gen)
+
         # --- actualizaciones ---
         self.contenido.append(seccion(t("settings.updates")))
         caja_upd = Tarjeta()
@@ -1225,6 +1326,39 @@ class VistaSettings(VistaBase):
             "Ko-fi", "ko-fi.com/vezzustudio", t("settings.open"),
             lambda: self._abrir("https://ko-fi.com/vezzustudio")))
         self.contenido.append(caja_about)
+
+    @staticmethod
+    def _fila_switch(titulo, desc, activo, on_toggle):
+        fila = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        fila.add_css_class("item-row")
+        texto = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
+        lbl = Gtk.Label(label=titulo, xalign=0)
+        lbl.add_css_class("item-title")
+        texto.append(lbl)
+        if desc:
+            sub = Gtk.Label(label=desc, xalign=0, wrap=True)
+            sub.add_css_class("item-sub")
+            texto.append(sub)
+        fila.append(texto)
+        sw = Gtk.Switch(valign=Gtk.Align.CENTER)
+        sw.set_active(activo)
+        sw.connect("state-set", on_toggle)
+        fila.append(sw)
+        return fila
+
+    def _idioma(self, cual, boton):
+        if not boton.get_active():
+            return
+        set_idioma(cual)
+        self.ventana._reconstruir()
+
+    def _toggle_notif(self, _sw, activo):
+        core.set_notificaciones(activo)
+        return False
+
+    def _toggle_autostart(self, _sw, activo):
+        core.set_inicio_con_sistema(activo)
+        return False
 
     def _toggle_auto(self, _sw, activo):
         updater.set_autoactualizar(activo)
@@ -1311,9 +1445,6 @@ class Ventana(Adw.ApplicationWindow):
         caja_txt.append(autor)
         fila_logo.append(caja_txt)
         marca.append(fila_logo)
-        lema = Gtk.Label(label=t("app.tagline"), xalign=0, wrap=True)
-        lema.add_css_class("brand-tagline")
-        marca.append(lema)
         lateral.append(marca)
 
         self.lista = Gtk.ListBox()
@@ -1350,20 +1481,6 @@ class Ventana(Adw.ApplicationWindow):
         kofi.set_tooltip_text(t("donate.instructions"))
         kofi.connect("clicked", lambda *_: self._ir_a_kofi())
         pie.append(kofi)
-
-        idioma_caja = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        idioma_caja.set_halign(Gtk.Align.CENTER)
-        self.btn_es = Gtk.ToggleButton(label="ES")
-        self.btn_en = Gtk.ToggleButton(label="EN")
-        for b in (self.btn_es, self.btn_en):
-            b.add_css_class("lang-btn")
-        self.btn_es.set_active(get_idioma() == "es")
-        self.btn_en.set_active(get_idioma() == "en")
-        self.btn_es.connect("toggled", lambda b: self._idioma("es", b))
-        self.btn_en.connect("toggled", lambda b: self._idioma("en", b))
-        idioma_caja.append(self.btn_es)
-        idioma_caja.append(self.btn_en)
-        pie.append(idioma_caja)
         lateral.append(pie)
 
         # barra de título propia de la barra lateral (sin botones)
@@ -1404,7 +1521,7 @@ class Ventana(Adw.ApplicationWindow):
         GLib.idle_add(self._seleccionar_inicio)
 
         # icono en la bandeja del sistema (si el escritorio la ofrece)
-        self.bandeja = Bandeja(self._mostrar_desde_bandeja)
+        self.bandeja = Bandeja(self._mostrar_desde_bandeja, self._menu_bandeja)
         self._salir_de_verdad = False
         self.connect("close-request", self._al_cerrar)
 
@@ -1427,6 +1544,40 @@ class Ventana(Adw.ApplicationWindow):
         # abierta. No compite con el aviso de donacion (dispara a los 8s).
         GLib.timeout_add_seconds(8, self._buscar_actualizacion)
         GLib.timeout_add_seconds(6 * 60 * 60, self._buscar_actualizacion)
+
+        # consumo alto de CPU/memoria: revisa cada 30s, avisa como mucho
+        # una vez cada 10 min para no ser molesto
+        self._ultimo_aviso_recursos = 0
+        GLib.timeout_add_seconds(30, self._vigilar_recursos)
+
+    def notificar(self, titulo, cuerpo):
+        if not core.notificaciones_activadas():
+            return
+        n = Gio.Notification.new(titulo)
+        n.set_body(cuerpo)
+        try:
+            n.set_icon(Gio.ThemedIcon.new("studio.vezzu.SOul"))
+        except Exception:
+            pass
+        self.get_application().send_notification(None, n)
+
+    def _vigilar_recursos(self):
+        en_hilo(core.salud, self._revisa_recursos)
+        return True
+
+    def _revisa_recursos(self, d, _e):
+        if not d:
+            return False
+        ahora = time.time()
+        if ahora - self._ultimo_aviso_recursos < 600:
+            return False
+        if d["cpu_pct"] >= 90:
+            self._ultimo_aviso_recursos = ahora
+            self.notificar(t("notif.cpu.title"), t("notif.cpu.body", pct=round(d["cpu_pct"])))
+        elif d["mem_pct"] >= 90:
+            self._ultimo_aviso_recursos = ahora
+            self.notificar(t("notif.mem.title"), t("notif.mem.body", pct=round(d["mem_pct"])))
+        return False
 
     def _arranque_permiso(self):
         if not core.polkit_listo():
@@ -1807,6 +1958,35 @@ class Ventana(Adw.ApplicationWindow):
             GLib.timeout_add_seconds(1, self._pedir_donacion_una_vez)
         return False
 
+    def _menu_bandeja(self):
+        """Clic derecho en el icono de bandeja: un menu rapido, no solo
+        restaurar la ventana."""
+        self.set_visible(True)
+        self.present()
+
+        if not hasattr(self, "_acciones_bandeja"):
+            self._acciones_bandeja = True
+            act = Gio.SimpleAction.new("tray_settings", None)
+            act.connect("activate", lambda *_: self.stack.set_visible_child_name("settings"))
+            self.add_action(act)
+            act2 = Gio.SimpleAction.new("tray_quit", None)
+
+            def salir(*_a):
+                self._salir_de_verdad = True
+                self.get_application().quit()
+            act2.connect("activate", salir)
+            self.add_action(act2)
+
+        menu = Gio.Menu()
+        menu.append(t("nav.settings"), "win.tray_settings")
+        menu.append(t("tray.quit"), "win.tray_quit")
+        popover = Gtk.PopoverMenu.new_from_model(menu)
+        popover.set_parent(self)
+        popover.set_halign(Gtk.Align.END)
+        popover.set_valign(Gtk.Align.START)
+        popover.popup()
+        return False
+
     def _pedir_donacion_una_vez(self):
         if not self._es_primer_uso and not core.ya_dono():
             self._pedir_donacion()
@@ -1828,16 +2008,6 @@ class Ventana(Adw.ApplicationWindow):
         except Exception:
             subprocess.Popen(["xdg-open", url])
 
-    def _idioma(self, cual, boton):
-        if not boton.get_active():
-            return
-        if get_idioma() == cual:
-            return
-        set_idioma(cual)
-        self.btn_es.set_active(cual == "es")
-        self.btn_en.set_active(cual == "en")
-        self.aviso("Idioma cambiado" if cual == "es" else "Language changed")
-        self._reconstruir()
 
     def _reconstruir(self):
         actual = self.stack.get_visible_child_name()
@@ -2139,6 +2309,38 @@ class Ventana(Adw.ApplicationWindow):
         dialog-host {
             background-color: rgba(8,6,16,0.55);
         }
+        /* estilo "cristal" para TODOS los dialogos de confirmacion (cerrar
+           app, desinstalar, limpiar, onboarding...), no solo donacion/
+           actualizacion: una sola regla en vez de repetir CSS en cada uno */
+        dialog-host > dialog.alert sheet {
+            background: linear-gradient(165deg, #201A3C 0%, #140F28 55%, #0B0714 100%);
+            border: 1px solid rgba(168,139,255,0.22);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.55),
+                        inset 0 1px 0 rgba(255,255,255,0.10);
+            color: #EEE9FB;
+        }
+        dialog-host > dialog.alert sheet .heading {
+            color: #ffffff; font-weight: 800;
+        }
+        dialog-host > dialog.alert sheet .body {
+            color: #B7C6D8;
+        }
+        dialog-host > dialog.alert sheet button {
+            background: rgba(255,255,255,0.06);
+            color: #EEE9FB;
+            border: 1px solid rgba(255,255,255,0.10);
+        }
+        dialog-host > dialog.alert sheet button:hover {
+            background: rgba(255,255,255,0.11);
+        }
+        dialog-host > dialog.alert sheet button.suggested-action {
+            background: linear-gradient(120deg, #8A7CFF 0%, #A88BFF 48%, #C97BEE 100%);
+            color: #14102A; font-weight: 800; border: none;
+        }
+        dialog-host > dialog.alert sheet button.destructive-action {
+            background: linear-gradient(120deg, #E5484D 0%, #C4353B 100%);
+            color: #fff; font-weight: 800; border: none;
+        }
         .donate-dialog {
             background: linear-gradient(165deg, #201A3C 0%, #140F28 55%, #0B0714 100%);
             border: 1px solid rgba(168,139,255,0.22);
@@ -2194,6 +2396,23 @@ class Ventana(Adw.ApplicationWindow):
             border: 1px solid rgba(255,178,89,0.25);
         }
         .update-notes-list { padding: 2px 2px 4px 2px; }
+
+        /* ---------- terminal de actividad en vivo ---------- */
+        .terminal-live {
+            background: #0A0F0A;
+            border: 1px solid rgba(63,217,176,0.25);
+            border-radius: 14px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .terminal-live-text, .terminal-live-text text {
+            background: transparent;
+            color: #3FD9B0;
+            font-family: monospace;
+            font-size: 12.5px;
+        }
+        .terminal-live-text text selection {
+            background: rgba(63,217,176,0.30);
+        }
         .update-note-dot {
             font-size: 6px; color: #A88BFF; margin-top: 7px;
         }
@@ -2214,7 +2433,11 @@ class SoulApp(Adw.Application):
     def do_activate(self):
         core.integrar_appimage()
         Adw.StyleManager.get_default().set_color_scheme(Adw.ColorScheme.FORCE_DARK)
-        Ventana(self).present()
+        ventana = Ventana(self)
+        if "--minimized" in sys.argv:
+            ventana.set_visible(False)
+        else:
+            ventana.present()
 
 
 def main():
