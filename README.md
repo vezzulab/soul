@@ -1,12 +1,31 @@
-# SOul — by Vezzu Studio
+<div align="center">
 
-**SO** (Sistema Operativo) + **alma** = **SOul**. Cuidado completo del
-sistema para Linux, en español e inglés, con una interfaz que no te obliga
-a saber qué es `VIRT`, `RES` o `NI`.
+<img src="assets/screenshot-smart.png" alt="SOul — cuidado del sistema para Linux" width="100%">
 
-htop nació en 2004 y sigue mostrando columnas pensadas para administradores
-de sistemas. SOul lee los mismos datos y te los dice en tu idioma, con un
-botón para arreglarlo.
+<br>
+
+**SO** (Sistema Operativo) + **alma** = **SOul.**<br>
+Cuidado completo del sistema para Linux, bilingüe, con una interfaz que no
+te obliga a saber qué es `VIRT`, `RES` o `NI`.
+
+<br>
+
+![Linux](https://img.shields.io/badge/platform-Linux-7aa2f7?style=for-the-badge&logo=linux&logoColor=white)
+![AppImage](https://img.shields.io/badge/package-AppImage-cba6f7?style=for-the-badge)
+![Python](https://img.shields.io/badge/python-3.11+-7aa2f7?style=for-the-badge&logo=python&logoColor=white)
+![GTK4](https://img.shields.io/badge/GTK-4%20·%20libadwaita-cba6f7?style=for-the-badge&logo=gtk&logoColor=white)
+
+[**Descargar**](https://github.com/vezzulab/soul/releases/latest) &nbsp;·&nbsp; [**Sitio web**](https://vezzulab.github.io/soul/) &nbsp;·&nbsp; [Reportar un problema](https://github.com/vezzulab/soul/issues)
+
+</div>
+
+<br>
+
+## Por qué SOul
+
+Los monitores de procesos clásicos muestran columnas pensadas para
+administradores de sistemas: `VIRT`, `RES`, `NI`... SOul lee los mismos
+datos y te los dice en tu idioma, con un botón para arreglarlo.
 
 ## Qué hace
 
