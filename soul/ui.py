@@ -312,9 +312,10 @@ class VistaLista(VistaBase):
         total = core.fmt_size(sum((f.tam or 0) for f in elegidas))
         nombres = ", ".join(t(f.tarea["titulo"]) for f in elegidas)
         necesita_pass = any(f.tarea.get("root") for f in elegidas)
-        cuerpo = nombres + (t("action.needs_password") if necesita_pass else "")
+        cuerpo = nombres + ("." + t("action.needs_password") if necesita_pass else "")
 
         dlg = Adw.AlertDialog(heading=t("dialog.clean", name=total), body=cuerpo)
+        dlg.set_content_width(420)
         dlg.add_response("cancel", t("action.cancel"))
         dlg.add_response("ok", t("action.clean"))
         dlg.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
@@ -460,8 +461,9 @@ class VistaSmart(VistaBase):
         dlg = Adw.AlertDialog(
             heading=t("dialog.clean", name=total),
             body=", ".join(t(tar["titulo"]) for tar, _ in self.encontrado)
-            + (t("action.needs_password") if necesita else ""),
+            + ("." + t("action.needs_password") if necesita else ""),
         )
+        dlg.set_content_width(420)
         dlg.add_response("cancel", t("action.cancel"))
         dlg.add_response("ok", t("action.clean"))
         dlg.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
@@ -548,6 +550,7 @@ class FilaProceso(Gtk.Box):
     def on_cerrar(self, _btn):
         dlg = Adw.AlertDialog(heading=t("dialog.close_app", name=self.datos["nombre"]),
                               body=t("dialog.close_app.body"))
+        dlg.set_content_width(420)
         dlg.add_response("cancel", t("action.cancel"))
         dlg.add_response("ok", t("perf.close"))
         dlg.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE)
@@ -738,6 +741,7 @@ class VistaRendimiento(VistaBase):
     def _cerrar(self, nombre, pids):
         dlg = Adw.AlertDialog(heading=t("dialog.close_app", name=nombre),
                               body=t("dialog.close_app.body"))
+        dlg.set_content_width(420)
         dlg.add_response("cancel", t("action.cancel"))
         dlg.add_response("ok", t("perf.close"))
         dlg.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE)
@@ -857,6 +861,7 @@ class VistaApps(VistaBase):
              "It will be removed from the system. It will ask for your password.")
         )
         dlg = Adw.AlertDialog(heading=t("apps.uninstall"), body=cuerpo)
+        dlg.set_content_width(420)
         dlg.add_response("cancel", t("action.cancel"))
         dlg.add_response("ok", t("apps.uninstall"))
         dlg.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE)
@@ -1383,6 +1388,7 @@ class VistaSettings(VistaBase):
         dlg = Adw.AlertDialog(
             heading=t("settings.reset_permission.btn"),
             body=t("settings.reset_permission.confirm"))
+        dlg.set_content_width(420)
         dlg.add_response("cancel", t("action.cancel"))
         dlg.add_response("ok", t("settings.reset_permission.btn"))
         dlg.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE)
@@ -1592,7 +1598,8 @@ class Ventana(Adw.ApplicationWindow):
             return updater.buscar_actualizacion()
 
         def listo(release, error):
-            if release and not error and release["version"] != updater.version_omitida():
+            clave = release["sha_asset"] or release["version"] if release else None
+            if release and not error and clave != updater.version_omitida():
                 self._mostrar_actualizacion(release)
             return False
 
@@ -1665,7 +1672,7 @@ class Ventana(Adw.ApplicationWindow):
 
         def resp(_d, r):
             if r == "skip":
-                updater.omitir_version(release["version"])
+                updater.omitir_version(release["sha_asset"] or release["version"])
             elif r == "go":
                 if puede:
                     self._descargar_actualizacion(release)
@@ -1681,6 +1688,7 @@ class Ventana(Adw.ApplicationWindow):
     def _descargar_actualizacion(self, release):
         dlg = Adw.AlertDialog(
             heading=t("update.downloading", version=release["version"]))
+        dlg.set_content_width(420)
         barra = Gtk.ProgressBar()
         barra.set_margin_top(8)
         dlg.set_extra_child(barra)
@@ -1825,6 +1833,7 @@ class Ventana(Adw.ApplicationWindow):
         self._copiar_codigo(codigo, avisar=False)
 
         dlg = Adw.AlertDialog()
+        dlg.set_content_width(420)
         dlg.add_css_class("donate-dialog")
         caja = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         caja.set_halign(Gtk.Align.CENTER)
@@ -1879,6 +1888,7 @@ class Ventana(Adw.ApplicationWindow):
 
     def _onboarding(self):
         dlg = Adw.AlertDialog(heading=t("onboard.title"), body=t("onboard.body"))
+        dlg.set_content_width(420)
         dlg.add_response("later", t("onboard.later"))
         dlg.add_response("yes", t("onboard.yes"))
         dlg.set_response_appearance("yes", Adw.ResponseAppearance.SUGGESTED)
@@ -1915,6 +1925,7 @@ class Ventana(Adw.ApplicationWindow):
             heading=t("close.title"),
             body=t("close.body"),
         )
+        dlg.set_content_width(420)
         dlg.add_response("cancel", t("action.cancel"))
         dlg.add_response("tray", t("close.tray"))
         dlg.add_response("quit", t("close.quit"))

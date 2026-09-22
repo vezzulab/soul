@@ -4,6 +4,7 @@ Privacidad: la comprobación es un único GET HTTPS a api.github.com al
 arrancar y cada 6 horas mientras la app sigue abierta. Lo único que se
 envía es el nombre y la versión del programa en el User-Agent.
 """
+import hashlib
 import json
 import os
 import re
@@ -15,6 +16,7 @@ HOME = os.path.expanduser("~")
 API_ULTIMO = "https://api.github.com/repos/vezzulab/soul/releases/latest"
 ARCHIVO_OMITIDA = os.path.join(HOME, ".local", "share", "soul", "version_omitida")
 ARCHIVO_SIN_AUTO = os.path.join(HOME, ".local", "share", "soul", "sin_autoactualizar")
+ARCHIVO_HASH_INSTALADO = os.path.join(HOME, ".local", "share", "soul", "sha256_instalado")
 NOMBRE_ASSET = "SOul-x86_64.AppImage"
 
 
@@ -68,11 +70,60 @@ def version_omitida():
         return ""
 
 
-def omitir_version(version):
+def omitir_version(clave):
     try:
         os.makedirs(os.path.dirname(ARCHIVO_OMITIDA), exist_ok=True)
         with open(ARCHIVO_OMITIDA, "w") as f:
-            f.write(version)
+            f.write(clave)
+    except OSError:
+        pass
+
+
+def _sha256_archivo(ruta):
+    """SHA-256 del archivo entero, leido en trozos para no cargarlo todo
+    en memoria (el AppImage pesa unos 30MB)."""
+    digest = hashlib.sha256()
+    with open(ruta, "rb") as f:
+        for trozo in iter(lambda: f.read(1 << 20), b""):
+            digest.update(trozo)
+    return digest.hexdigest()
+
+
+def hash_instalado():
+    """El sha256 de la version instalada ahora mismo. Es la fuente real
+    de si hay algo nuevo — no un numero de version que hay que acordarse
+    de subir cada vez: si se vuelve a publicar el mismo tag con un
+    archivo distinto, esto igual lo detecta.
+
+    Se calcula una sola vez (al primer arranque tras instalar) y se
+    guarda; despues solo se actualiza cuando SOul se actualiza a si
+    mismo. Si no corre como AppImage, no hay nada que hashear."""
+    try:
+        with open(ARCHIVO_HASH_INSTALADO) as f:
+            guardado = f.read().strip()
+            if guardado:
+                return guardado
+    except OSError:
+        pass
+
+    ruta = appimage_actual()
+    if not ruta:
+        return ""
+    try:
+        h = _sha256_archivo(ruta)
+        os.makedirs(os.path.dirname(ARCHIVO_HASH_INSTALADO), exist_ok=True)
+        with open(ARCHIVO_HASH_INSTALADO, "w") as f:
+            f.write(h)
+        return h
+    except OSError:
+        return ""
+
+
+def _marcar_hash_instalado(h):
+    try:
+        os.makedirs(os.path.dirname(ARCHIVO_HASH_INSTALADO), exist_ok=True)
+        with open(ARCHIVO_HASH_INSTALADO, "w") as f:
+            f.write(h)
     except OSError:
         pass
 
@@ -80,7 +131,8 @@ def omitir_version(version):
 def buscar_actualizacion():
     """Consulta el ultimo release. Se llama desde un hilo aparte: es red,
     no debe congelar la interfaz. None si no hay internet, no hay
-    releases, o la ultima publicada no es mas nueva que la actual."""
+    releases, o el archivo publicado es exactamente el que ya se tiene
+    instalado (mismo sha256, sin importar el numero de version)."""
     try:
         req = urllib.request.Request(
             API_ULTIMO,
@@ -96,15 +148,30 @@ def buscar_actualizacion():
         return None
     tag = str(datos.get("tag_name") or "")
     version = parsear_version(tag)
-    if version is None or not es_mas_nueva(".".join(map(str, version))):
+    if version is None:
         return None
 
     url_asset = ""
     tamano_asset = 0
+    sha_asset = ""
     for asset in datos.get("assets") or []:
         if asset.get("name") == NOMBRE_ASSET:
             url_asset = str(asset.get("browser_download_url") or "")
             tamano_asset = int(asset.get("size") or 0)
+            digest = str(asset.get("digest") or "")
+            if digest.startswith("sha256:"):
+                sha_asset = digest[7:].lower()
+
+    instalado = hash_instalado()
+    # si tenemos ambos hashes y coinciden, es exactamente lo que ya hay
+    # instalado: no hay nada que ofrecer, sin importar tags ni numeros
+    if sha_asset and instalado and sha_asset == instalado:
+        return None
+    # sin hash de ninguno de los dos lados (p. ej. corriendo desde
+    # codigo fuente), se cae al numero de version como antes
+    if not sha_asset or not instalado:
+        if not es_mas_nueva(".".join(map(str, version))):
+            return None
 
     return {
         "version": ".".join(map(str, version)),
@@ -113,6 +180,7 @@ def buscar_actualizacion():
                           "https://github.com/vezzulab/soul/releases"),
         "url_asset": url_asset,
         "tamano_asset": tamano_asset,
+        "sha_asset": sha_asset,
     }
 
 
@@ -174,4 +242,6 @@ def instalar_actualizacion(descargado):
     esta corriendo se queda valido: mantiene abierto su inodo viejo, asi
     que esto no rompe la instancia que sigue abierta ahora mismo."""
     destino = appimage_actual()
+    h = _sha256_archivo(descargado)
     os.replace(descargado, destino)
+    _marcar_hash_instalado(h)
